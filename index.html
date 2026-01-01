@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>By Peem Drawing App: All Buttons Fixed</title>
+    <style>
+        /* ** 1. สไตล์พื้นฐานและ Layout หลัก ** */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding-top: 30px;
+            background: linear-gradient(135deg, #f0f4f8, #c8d4e0); 
+            min-height: 100vh;
+        }
+
+        h2 {
+            color: #1e3c72;
+            margin-bottom: 25px;
+            font-size: 2.2em; 
+        }
+
+        /* ** NEW: Main Container สำหรับ UI ทั้งหมด ** */
+        .app-container {
+            display: flex;
+            gap: 20px;
+            width: 1200px; 
+            max-width: 95%;
+        }
+
+        /* ** 2. Canvas และ Layer Container ** */
+        .canvas-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1; 
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 800px; 
+            height: 500px; 
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); 
+            border-radius: 8px; 
+            background-color: #ffffff; 
+            overflow: hidden; 
+            transform-origin: top left; 
+            transition: transform 0.2s ease-in-out; 
+        }
+        
+        .drawing-layer {
+            position: absolute; 
+            top: 0;
+            left: 0;
+            visibility: visible; 
+            transition: opacity 0.2s;
+        }
+        .drawing-layer.hidden {
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        /* ** 3. Control Panel (Controls) ** */
+        .controls {
+            width: 800px;
+            padding: 15px 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 15px;
+            
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 15px; 
+            align-items: flex-start;
+        }
+        
+        .control-group { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            gap: 5px;
+            padding: 5px 0;
+        }
+
+        .controls label { 
+            color: #333; 
+            font-weight: 600; 
+            font-size: 0.9em;
+        }
+
+        input[type="number"], select, input[type="range"] { 
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="color"] { -webkit-appearance: none; border: none; width: 35px; height: 35px; padding: 0; border-radius: 50%; cursor: pointer; overflow: hidden; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+
+
+        /* Color Swatches (Expanded) */
+        .swatch-group {
+            grid-column: span 2;
+        }
+        .color-swatches, #recentColors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            width: 100%;
+            padding-top: 5px;
+        }
+        .swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff; 
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .swatch.recent {
+            border: 2px solid #3f51b5; 
+        }
+        
+        /* Tool Buttons Group */
+        .tool-group-buttons {
+            grid-column: span 2;
+            display: flex;
+            gap: 5px;
+        }
+        
+        /* Brush Preview & Opacity Group */
+        #previewGroup {
+            grid-column: span 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #brushPreviewContainer {
+            width: 100%;
+            height: 50px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        /* Action Buttons (Save/Undo/Clear/Zoom) */
+        .action-group {
+            grid-column: span 6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .zoom-controls {
+            display: flex;
+            gap: 5px;
+        }
+        #zoomDisplay {
+            padding: 8px 12px;
+            font-weight: 600;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+            color: #333;
+        }
+
+        .tool-button, .action-button, #saveButton { 
+            padding: 8px 12px;
+            border-radius: 6px; 
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        /* ** 4. Layer Panel Section ** */
+        .layer-section {
+            width: 350px; 
+            order: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #layerPanel {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            flex-grow: 1; 
+        }
+        
+        .layer-panel-title {
+            font-weight: 700;
+            color: #1e3c72;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        #layerListContainer {
+            min-height: 50px; 
+        }
+
+        .layer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background-color: #f7f7f7;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .layer-item.active {
+            background-color: #e0f2f1; 
+            border-left: 3px solid #009688; 
+            font-weight: 600;
+        }
+        .layer-visibility-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 5px;
+            font-size: 1.2em;
+        }
+        .layer-visibility-btn:hover {
+            opacity: 0.7;
+        }
+        .layer-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h2>✍️ By Peem Drawing App</h2> 
+    
+    <div class="app-container">
+        
+        <div class="canvas-section">
+            
+            <div class="controls">
+                
+                <div class="control-group">
+                    <label for="lineWidth">ขนาดเส้น:</label>
+                    <input type="number" id="lineWidth" value="8" min="1" max="50">
+                </div>
+                
+                <div class="control-group">
+                    <label for="brushShape">รูปทรง:</label>
+                    <select id="brushShape">
+                        <option value="round">กลม</option>
+                        <option value="square">เหลี่ยม</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="opacityRange">ความทึบ (Opacity): <span id="opacityValue">100%</span></label>
+                    <input type="range" id="opacityRange" min="0" max="100" value="100">
+                </div>
+                
+                <div class="control-group">
+                    <label>สี:</label>
+                    <input type="color" id="colorPicker" value="#1e3c72">
+                </div>
+                
+                <div class="control-group" id="previewGroup">
+                    <label>ตัวอย่างพู่กัน:</label>
+                    <div id="brushPreviewContainer">
+                        <canvas id="brushPreview" width="100" height="50"></canvas>
+                    </div>
+                </div>
+
+                <div class="tool-group-buttons">
+                    <button id="penTool" class="tool-button active" data-tool="pen">✏️ ปากกา</button>
+                    <button id="eraserTool" class="tool-button" data-tool="eraser">🧽 ยางลบ</button>
+                    <button id="fillTool" class="tool-button" data-tool="fill"> Bucket</button>
+                    <button id="eyedropperTool" class="tool-button" data-tool="eyedropper"> 👁️ ดูดสี</button>
+                </div>
+
+                <div class="control-group swatch-group">
+                    <label>สีด่วน:</label>
+                    <div class="color-swatches">
+                        <div class="swatch" data-color="#000000" style="background-color: #000000;"></div> 
+                        <div class="swatch" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></div> 
+                        <div class="swatch" data-color="#ff0000" style="background-color: #ff0000;"></div> 
+                        <div class="swatch" data-color="#ffa500" style="background-color: #ffa500;"></div> 
+                        <div class="swatch" data-color="#ffff00" style="background-color: #ffff00;"></div> 
+                        <div class="swatch" data-color="#008000" style="background-color: #008000;"></div> 
+                        <div class="swatch" data-color="#0000ff" style="background-color: #0000ff;"></div> 
+                        <div class="swatch" data-color="#4b0082" style="background-color: #4b0082;"></div> 
+                        <div class="swatch" data-color="#800080" style="background-color: #800080;"></div> 
+                        <div class="swatch" data-color="#a52a2a" style="background-color: #a52a2a;"></div> 
+                        <div class="swatch" data-color="#cccccc" style="background-color: #cccccc;"></div> 
+                        <div class="swatch" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+                    </div>
+                </div>
+                
+                <div class="control-group swatch-group">
+                    <label>สีล่าสุด (History):</label>
+                    <div id="recentColors">
+                        </div>
+                </div>
+
+                <div class="action-group">
+                    <button id="undoButton" class="action-button">↩️ ย้อนกลับ</button> 
+                    <button id="clearLayerButton" class="action-button">ล้างเลเยอร์นี้</button> 
+                    
+                    <div class="zoom-controls">
+                        <span id="zoomDisplay">100%</span>
+                        <button id="zoomOutBtn" class="action-button">➖</button>
+                        <button id="zoomInBtn" class="action-button">➕</button>
+                        <button id="zoomResetBtn" class="action-button">1:1</button>
+                    </div>
+                    
+                    <button id="saveButton">💾 บันทึกผลงาน</button>
+                </div>
+
+            </div>
+
+            <div class="canvas-container" id="canvasContainer">
+                </div>
+
+        </div>
+
+        <div class="layer-section">
+            <div id="layerPanel">
+                <div class="layer-panel-title">ชั้นเลเยอร์ (Layers)</div>
+                <div id="layerListContainer">
+                    </div>
+            </div>
+            <div id="layerControls">
+                <button id="addLayerBtn" class="layer-action-btn">➕ เพิ่มเลเยอร์</button>
+                <button id="removeLayerBtn" class="layer-action-btn" disabled>🗑️ ลบเลเยอร์</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const WIDTH = 800;
+        const HEIGHT = 500;
+        const MAX_ZOOM = 2.0;
+        const MIN_ZOOM = 0.5;
+        const ZOOM_STEP = 0.2;
+        const MAX_HISTORY_COLORS = 5;
+
+        // ** A. Element References **
+        const canvasContainer = document.getElementById('canvasContainer');
+        const layerPanel = document.getElementById('layerPanel');
+        const layerListContainer = document.getElementById('layerListContainer');
+        const colorPicker = document.getElementById('colorPicker');
+        const lineWidthInput = document.getElementById('lineWidth');
+        const brushShapeSelect = document.getElementById('brushShape'); 
+        const opacityRange = document.getElementById('opacityRange'); 
+        const opacityValueSpan = document.getElementById('opacityValue'); 
+        const brushPreviewCanvas = document.getElementById('brushPreview'); 
+        const previewCtx = brushPreviewCanvas.getContext('2d'); 
+        const zoomDisplay = document.getElementById('zoomDisplay');
+        const recentColorsContainer = document.getElementById('recentColors');
+
+        const undoButton = document.getElementById('undoButton'); 
+        const addLayerBtn = document.getElementById('addLayerBtn');
+        const removeLayerBtn = document.getElementById('removeLayerBtn');
+        const clearLayerButton = document.getElementById('clearLayerButton'); 
+        const saveButton = document.getElementById('saveButton'); 
+        const zoomInBtn = document.getElementById('zoomInBtn'); 
+        const zoomOutBtn = document.getElementById('zoomOutBtn'); 
+        const zoomResetBtn = document.getElementById('zoomResetBtn'); 
+        const swatches = document.querySelectorAll('.swatch');
+        
+        // ** B. CORE DATA STRUCTURES **
+        let layers = []; 
+        let activeLayerIndex = -1;
+        let currentTool = 'pen'; 
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        const maxStackSize = 30;
+        let currentZoom = 1.0;
+        let colorHistory = []; 
+
+        // ** 1. Layer Management Functions **
+
+        function initContext(ctx) {
+            ctx.lineJoin = 'round';
+            ctx.lineCap = brushShapeSelect.value;
+            ctx.strokeStyle = colorPicker.value; 
+            ctx.lineWidth = lineWidthInput.value;
+            ctx.globalAlpha = opacityRange.value / 100;
+        }
+        
+        function addLayer() {
+            const layerId = layers.length + 1;
+            
+            const newCanvas = document.createElement('canvas');
+            newCanvas.id = `layer${layerId}`;
+            newCanvas.className = 'drawing-layer';
+            newCanvas.width = WIDTH;
+            newCanvas.height = HEIGHT;
+            
+            const newCtx = newCanvas.getContext('2d');
+            const newLayer = {
+                id: layerId,
+                canvas: newCanvas,
+                ctx: newCtx,
+                undoStack: [],
+                isVisible: true
+            };
+            
+            initContext(newCtx); 
+            
+            layers.push(newLayer);
+            canvasContainer.appendChild(newCanvas);
+            
+            updateLayerPanelUI();
+            setActiveLayer(layers.length - 1);
+            
+            saveState();
+        }
+
+        function removeLayer() {
+            if (layers.length <= 1) {
+                alert("ต้องมีอย่างน้อยหนึ่งเลเยอร์!");
+                return;
+            }
+            
+            const removedLayer = layers[activeLayerIndex];
+            removedLayer.canvas.remove();
+            layers.splice(activeLayerIndex, 1);
+            
+            const newActiveIndex = Math.max(0, activeLayerIndex - 1);
+            updateLayerPanelUI();
+            setActiveLayer(newActiveIndex);
+        }
+
+        function setActiveLayer(index) {
+            if (index < 0 || index >= layers.length) return;
+            activeLayerIndex = index;
+            
+            layers.forEach((layer, i) => {
+                layer.canvas.style.zIndex = (i === index) ? layers.length + 1 : i; 
+                layer.canvas.style.pointerEvents = (i === index) ? 'auto' : 'none'; 
+            });
+            
+            updateCursor();
+            updateLayerPanelUI();
+        }
+
+        function toggleLayerVisibility(layerIndex) {
+            const layer = layers[layerIndex];
+            layer.isVisible = !layer.isVisible;
+            layer.canvas.classList.toggle('hidden', !layer.isVisible);
+            updateLayerPanelUI();
+        }
+        
+        function updateCursor() {
+             const cursorStyle = (currentTool === 'eraser') ? 'cell' : 
+                                 (currentTool === 'fill' || currentTool === 'eyedropper') ? 'pointer' : 'crosshair';
+            
+            layers.forEach((layer, i) => {
+                if (i === activeLayerIndex) {
+                    layer.canvas.style.cursor = cursorStyle;
+                }
+            });
+        }
+
+        function updateLayerPanelUI() {
+            layerListContainer.innerHTML = '';
+
+            layers.slice().reverse().forEach((layer, originalIndex) => {
+                const globalIndex = layers.length - 1 - originalIndex; 
+                const isCurrent = globalIndex === activeLayerIndex;
+
+                const layerItem = document.createElement('div');
+                layerItem.className = `layer-item ${isCurrent ? 'active' : ''}`;
+                layerItem.dataset.index = globalIndex;
+                
+                const titleGroup = document.createElement('div');
+                titleGroup.className = 'layer-title-group';
+
+                const visibilityBtn = document.createElement('button');
+                visibilityBtn.className = 'layer-visibility-btn';
+                visibilityBtn.innerHTML = layer.isVisible ? '👀' : '🚫';
+                visibilityBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    toggleLayerVisibility(globalIndex);
+                });
+                titleGroup.appendChild(visibilityBtn);
+
+                const layerTitle = document.createElement('span');
+                layerTitle.textContent = `Layer ${layer.id}`;
+                titleGroup.appendChild(layerTitle);
+
+                layerItem.appendChild(titleGroup);
+
+                layerItem.addEventListener('click', () => setActiveLayer(globalIndex));
+                layerListContainer.appendChild(layerItem); 
+            });
+
+            removeLayerBtn.disabled = layers.length <= 1;
+        }
+
+        // ** 2. Drawing and Tools Logic **
+
+        function saveState() {
+            const activeLayer = layers[activeLayerIndex];
+            if (!activeLayer) return;
+
+            const stack = activeLayer.undoStack;
+            if (stack.length >= maxStackSize) { stack.shift(); }
+            stack.push(activeLayer.canvas.toDataURL());
+        }
+
+        function undoLastAction() {
+            const activeLayer = layers[activeLayerIndex];
+            if (!activeLayer) return;
+
+            const stack = activeLayer.undoStack;
+            
+            if (stack.length > 1) { 
+                stack.pop(); 
+                const lastState = stack[stack.length - 1]; 
+                
+                const img = new Image();
+                img.onload = function() {
+                    activeLayer.ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                    activeLayer.ctx.drawImage(img, 0, 0);
+                };
+                img.src = lastState;
+            } else if (stack.length === 1) {
+                activeLayer.ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                stack.pop(); 
+                saveState(); 
+            }
+        }
+        
+        // ** NEW **: Clear Canvas Function
+        function clearCanvas() {
+            const activeLayer = layers[activeLayerIndex];
+            if (!activeLayer) return;
+            activeLayer.ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            saveState(); 
+        }
+
+        function setTool(toolName) {
+            if (currentTool === 'pen' && toolName !== 'pen') {
+                updateColorHistory(colorPicker.value);
+            }
+            
+            currentTool = toolName;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(toolName + 'Tool').classList.add('active');
+            updateCursor(); 
+            updateBrushPreview(); 
+        }
+
+        function draw(e) {
+            const activeLayer = layers[activeLayerIndex];
+            
+            if (!isDrawing || currentTool === 'fill' || currentTool === 'eyedropper' || !activeLayer || !activeLayer.isVisible) return; 
+
+            const ctx = activeLayer.ctx;
+            
+            ctx.lineCap = brushShapeSelect.value; 
+            ctx.lineJoin = brushShapeSelect.value;
+            
+            if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out'; 
+                ctx.lineWidth = lineWidthInput.value * 2; 
+                ctx.globalAlpha = 1.0; 
+            } else { 
+                ctx.globalCompositeOperation = 'source-over'; 
+                ctx.strokeStyle = colorPicker.value; 
+                ctx.lineWidth = lineWidthInput.value;
+                ctx.globalAlpha = opacityRange.value / 100; 
+            }
+            
+            ctx.beginPath();
+            
+            ctx.moveTo(lastX, lastY); 
+            ctx.lineTo(e.offsetX / currentZoom, e.offsetY / currentZoom); 
+            ctx.stroke();
+
+            [lastX, lastY] = [e.offsetX / currentZoom, e.offsetY / currentZoom];
+        }
+
+        function fillCanvas(e) {
+            const activeLayer = layers[activeLayerIndex];
+            if (currentTool !== 'fill' || !activeLayer || !activeLayer.isVisible) return;
+            
+            const ctx = activeLayer.ctx;
+
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = colorPicker.value;
+            ctx.globalAlpha = opacityRange.value / 100;
+            
+            ctx.fillRect(0, 0, WIDTH, HEIGHT); 
+            
+            saveState();
+        }
+
+        function handleEyedropperClick(e) {
+            if (currentTool !== 'eyedropper') return;
+
+            const rect = canvasContainer.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / currentZoom);
+            const y = Math.floor((e.clientY - rect.top) / currentZoom);
+
+            if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = WIDTH;
+            finalCanvas.height = HEIGHT;
+            const finalCtx = finalCanvas.getContext('2d');
+            
+            layers.forEach(layer => {
+                if (layer.isVisible) {
+                    finalCtx.drawImage(layer.canvas, 0, 0);
+                }
+            });
+
+            const pixelData = finalCtx.getImageData(x, y, 1, 1).data;
+            const r = pixelData[0];
+            const g = pixelData[1];
+            const b = pixelData[2];
+            
+            const newHexColor = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+
+            updateColorHistory(newHexColor);
+            colorPicker.value = newHexColor;
+            setTool('pen'); 
+
+            finalCanvas.remove();
+        }
+
+        // ** 3. Color History Functions **
+        function updateColorHistory(newColor) {
+            const index = colorHistory.indexOf(newColor);
+            if (index > -1) {
+                colorHistory.splice(index, 1);
+            } else if (colorHistory.length >= MAX_HISTORY_COLORS) {
+                colorHistory.pop();
+            }
+            colorHistory.unshift(newColor);
+            
+            renderColorHistory();
+        }
+
+        function renderColorHistory() {
+            recentColorsContainer.innerHTML = '';
+            colorHistory.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'swatch recent';
+                swatch.style.backgroundColor = color;
+                swatch.setAttribute('data-color', color);
+                swatch.addEventListener('click', () => {
+                    colorPicker.value = color; 
+                    setTool('pen'); 
+                });
+                recentColorsContainer.appendChild(swatch);
+            });
+        }
+        
+        // ** 4. Brush Preview Function **
+        function updateBrushPreview() {
+            const previewWidth = brushPreviewCanvas.width;
+            const previewHeight = brushPreviewCanvas.height;
+            const size = parseInt(lineWidthInput.value);
+            const shape = brushShapeSelect.value;
+            const alpha = opacityRange.value / 100;
+            
+            previewCtx.clearRect(0, 0, previewWidth, previewHeight);
+
+            previewCtx.beginPath();
+            
+            if (currentTool === 'eraser') {
+                previewCtx.fillStyle = 'rgba(200, 200, 200, 1)';
+                const eraserSize = size * 2;
+                if (shape === 'round') {
+                    previewCtx.arc(previewWidth / 2, previewHeight / 2, eraserSize / 2, 0, Math.PI * 2);
+                } else {
+                    previewCtx.fillRect(previewWidth / 2 - eraserSize / 2, previewHeight / 2 - eraserSize / 2, eraserSize, eraserSize);
+                }
+            } else {
+                previewCtx.fillStyle = colorPicker.value;
+                previewCtx.globalAlpha = alpha;
+
+                if (shape === 'round') {
+                    previewCtx.arc(previewWidth / 2, previewHeight / 2, size / 2, 0, Math.PI * 2);
+                } else {
+                    previewCtx.fillRect(previewWidth / 2 - size / 2, previewHeight / 2 - size / 2, size, size);
+                }
+            }
+            
+            previewCtx.fill();
+            previewCtx.globalAlpha = 1.0; 
+        }
+
+        // ** 5. Zoom Functionality **
+        function updateZoom(factor) {
+            currentZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom + factor));
+            canvasContainer.style.transform = `scale(${currentZoom})`;
+            zoomDisplay.textContent = `${Math.round(currentZoom * 100)}%`; 
+        }
+        
+        function resetZoom() {
+            currentZoom = 1.0;
+            canvasContainer.style.transform = 'scale(1.0)';
+            zoomDisplay.textContent = '100%';
+        }
+
+        // ** 6. Save Function **
+        function mergeAndSave() {
+            if (layers.length === 0) { alert("ไม่มีเลเยอร์ให้บันทึก!"); return; }
+            
+            let fileName = prompt("โปรดตั้งชื่อผลงานของคุณ (สำหรับใช้เป็นชื่อไฟล์):", "My_Artwork");
+            if (!fileName) { fileName = "Untitled_By_Peem"; }
+            
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = WIDTH;
+            finalCanvas.height = HEIGHT;
+            const finalCtx = finalCanvas.getContext('2d');
+            
+            layers.forEach(layer => {
+                if (layer.isVisible) {
+                    finalCtx.drawImage(layer.canvas, 0, 0); 
+                }
+            });
+            
+            const dataURL = finalCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = `${fileName.replace(/ /g, '_')}_${Date.now()}.png`; 
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            finalCanvas.remove();
+        }
+
+
+        // ** 7. Event Listener Binding Function **
+        function setupEventListeners() {
+            // --- Canvas Drawing Listeners (Primary Interaction) ---
+            canvasContainer.addEventListener('mousedown', (e) => {
+                const activeLayer = layers[activeLayerIndex];
+                if (!activeLayer) return;
+
+                if (currentTool === 'eyedropper') {
+                    handleEyedropperClick(e);
+                    return;
+                }
+
+                if (currentTool === 'pen' || currentTool === 'eraser') {
+                    isDrawing = true;
+                    const rect = activeLayer.canvas.getBoundingClientRect(); 
+                    lastX = (e.clientX - rect.left) / currentZoom; 
+                    lastY = (e.clientY - rect.top) / currentZoom;
+                }
+            });
+            
+            canvasContainer.addEventListener('mouseup', () => {
+                if (isDrawing) { 
+                    isDrawing = false; 
+                    saveState(); 
+                    if (currentTool === 'pen') {
+                        updateColorHistory(colorPicker.value);
+                    }
+                }
+            });
+            
+            canvasContainer.addEventListener('mousemove', (e) => {
+                const activeLayer = layers[activeLayerIndex];
+                if (!activeLayer) return;
+
+                const rect = activeLayer.canvas.getBoundingClientRect(); 
+                e.offsetX = e.clientX - rect.left;
+                e.offsetY = e.clientY - rect.top;
+                draw(e);
+            });
+            
+            canvasContainer.addEventListener('mouseout', () => {
+                if (isDrawing) { 
+                    isDrawing = false; 
+                    saveState(); 
+                }
+            });
+            
+            canvasContainer.addEventListener('click', (e) => {
+                if (currentTool === 'fill') {
+                    const activeLayer = layers[activeLayerIndex];
+                    if (!activeLayer) return;
+                    
+                    const rect = activeLayer.canvas.getBoundingClientRect();
+                    e.offsetX = e.clientX - rect.left;
+                    e.offsetY = e.clientY - rect.top;
+                    fillCanvas(e);
+                    updateColorHistory(colorPicker.value);
+                }
+            });
+            
+            // --- Tool Buttons ---
+            document.getElementById('penTool').addEventListener('click', () => setTool('pen'));
+            document.getElementById('eraserTool').addEventListener('click', () => setTool('eraser'));
+            document.getElementById('fillTool').addEventListener('click', () => setTool('fill'));
+            document.getElementById('eyedropperTool').addEventListener('click', () => setTool('eyedropper'));
+
+            // --- Controls ---
+            colorPicker.addEventListener('input', updateBrushPreview);
+            lineWidthInput.addEventListener('input', updateBrushPreview);
+            brushShapeSelect.addEventListener('change', updateBrushPreview);
+            
+            opacityRange.addEventListener('input', () => {
+                opacityValueSpan.textContent = `${opacityRange.value}%`;
+                updateBrushPreview();
+            });
+            
+            // Brush Shape (Must update all contexts and preview)
+            brushShapeSelect.addEventListener('change', () => {
+                layers.forEach(layer => {
+                    layer.ctx.lineCap = brushShapeSelect.value;
+                    layer.ctx.lineJoin = brushShapeSelect.value;
+                });
+                if (currentTool !== 'fill') { setTool('pen'); }
+            });
+
+            // --- Action Buttons ---
+            undoButton.addEventListener('click', undoLastAction); 
+            clearLayerButton.addEventListener('click', clearCanvas); 
+            saveButton.addEventListener('click', mergeAndSave); 
+            
+            // --- Zoom Buttons ---
+            zoomInBtn.addEventListener('click', () => updateZoom(ZOOM_STEP));
+            zoomOutBtn.addEventListener('click', () => updateZoom(-ZOOM_STEP));
+            zoomResetBtn.addEventListener('click', resetZoom);
+
+            // --- Layer Buttons ---
+            addLayerBtn.addEventListener('click', addLayer); 
+            removeLayerBtn.addEventListener('click', removeLayer);
+            
+            // --- Swatch & History Clicks ---
+            document.querySelectorAll('.color-swatches .swatch').forEach(swatch => {
+                swatch.addEventListener('click', () => {
+                    const newColor = swatch.getAttribute('data-color');
+                    colorPicker.value = newColor; 
+                    setTool('pen'); 
+                });
+            });
+        }
+
+
+        // ** 8. Initialization **
+        document.addEventListener('DOMContentLoaded', () => {
+            // ** FIX **: ผูก Event Listeners หลัง DOMContentLoaded เพื่อความมั่นใจ
+            setupEventListeners();
+            
+            addLayer(); 
+            updateBrushPreview();
+            resetZoom(); 
+        });
+    </script>
+</body>
+</html>
